@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+
+  node-app:
+    build: 
+      context: ./node
+    entrypoint: wait-for mysql:3306 -t 40 -- node /usr/src/app/index.js
+    image: caiocris/node
+    container_name: node-app
+    networks: 
+      - node-network
+    volumes:
+      - ./node:/usr/src/app
+    tty: true
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+    
+  nginx:
+    build:
+      context: ./nginx
+    image: caiocris/nginx
+    container_name: nginx
+    networks:
+      - node-network
+    ports:
+      - "80:80"
+
+  mysql:
+    platform: linux/x86_64
+    image: mysql:5.7.32
+    command: --innodb-use-native-aio=0
+    container_name: mysql
+    restart: always
+    tty: true
+    volumes:
+      - ./mysql:/var/lib/mysql
+      - ./node/criar_tabela.sql:/docker-entrypoint-initdb.d/criar_tabela.sql
+    environment:
+      - MYSQL_DATABASE=nodedb
+      - MYSQL_ROOT_PASSWORD=root
+    networks:
+      - node-network
+
+networks:
+  node-network:
+    driver: bridge
+
+  

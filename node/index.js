@@ -11,27 +11,41 @@ const config = {
 const mysql = require('mysql')
 const connection = mysql.createConnection(config)
 
-const sqlInsert = `INSERT INTO people(name) values('Caio')`
-connection.query(sqlInsert)
+const nomeInserir = process.argv[2] || 'Caio'; 
+
+const sqlInsert = `INSERT INTO people(name) values(?)`;
+connection.query(sqlInsert, [nomeInserir], function (err, results, fields) {
+    if (err) {
+        console.error('Erro ao inserir:', err);
+        return;
+    }
+    console.log('Registro inserido com sucesso:', results);
+});
 
 const sqlSelect = `SELECT * FROM people`
-async function executeQuery(query) {
-    try {
-        const [rows, fields] = await connection.execute(query); // Executando a consulta
-        connection.release(); // Liberando a conexão de volta para o pool
-        return rows; // Retornando os resultados da consulta
-    } catch (error) {
-        throw error; // Lançando o erro para ser tratado no código que chamar essa função
-    }
-}
 
-connection.end()
+app.get('/', (req, res) => {
+    connection.query(sqlSelect, function (err, rows, fields) {
+        if (err) {
+            console.error('Erro ao executar a consulta:', err);
+            res.status(500).send('Erro ao processar a requisição');
+            return;
+        }
 
-app.get('/', async (req, res) => {
-    const result = await executeQuery(sqlSelect)
-    console.log(`result -> ${result}`)
-    res.send(`<h1>Full Cycle Rocks!</h1>`)
-})
+        let response = '<h1>Full Cycle Rocks!</h1>';
+
+        response += '<table border="1">';
+        response += '<tr><th>ID</th><th>Nome</th></tr>';
+
+        rows.forEach(row => {
+            response += `<tr><td>${row.id}</td><td>${row.name}</td></tr>`;
+        });
+
+        response += '</table>';
+
+        res.send(response);
+    });
+});
 
 app.listen(port, () => {
     console.log('Rodando na porta ' + port)
